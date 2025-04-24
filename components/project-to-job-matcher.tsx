@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,67 +10,50 @@ import { Label } from "@/components/ui/label"
 import { Loader2, Github, Briefcase, ArrowRight } from "lucide-react"
 import { MatchResult } from "@/components/match-result"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useMatch } from "@/hooks/useMatch"
 
 export function ProjectToJobMatcher() {
   const [githubUrl, setGithubUrl] = useState("")
   const [jobDescriptions, setJobDescriptions] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
   const [results, setResults] = useState<any>(null)
+  const [submitted, setSubmitted] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  // Fetch JWT token from localStorage for auth
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") || undefined : undefined
+  const { matchProjectToJobs, loading, error } = useMatch(token)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setSubmitted(true)
+    setResults(null)
+    setLocalError(null)
 
-    if (!githubUrl) {
-      setError("Please enter a GitHub repository URL")
+    if (!githubUrl || !jobDescriptions) {
       return
     }
 
-    if (!jobDescriptions) {
-      setError("Please enter at least one job description")
+    const jobDescriptionsArray = jobDescriptions
+      .split("\n")
+      .map((desc) => desc.trim())
+      .filter((desc) => desc.length > 0)
+
+    if (jobDescriptionsArray.length === 0) {
+      setLocalError("Please enter at least one valid job description.")
       return
     }
-
-    setIsLoading(true)
 
     try {
-      // In a real implementation, this would call the Flask API
-      // For demo purposes, we'll simulate a response after a delay
-      setTimeout(() => {
-        const mockResults = {
-          matches: [
-            {
-              job_title: "Senior Frontend Developer",
-              company: "TechCorp",
-              match_score: 87,
-              key_factors: [
-                "Strong React.js experience matches repository's React usage",
-                "TypeScript proficiency evident in project structure",
-                "UI/UX focus aligns with job requirements",
-                "Missing experience with GraphQL mentioned in job description",
-              ],
-            },
-            {
-              job_title: "Full Stack Engineer",
-              company: "InnovateSoft",
-              match_score: 72,
-              key_factors: [
-                "JavaScript/TypeScript skills match job requirements",
-                "Frontend framework experience aligns with position needs",
-                "Limited backend code in repository compared to job expectations",
-                "CI/CD implementation shows DevOps knowledge required by job",
-              ],
-            },
-          ],
-        }
-
-        setResults(mockResults)
-        setIsLoading(false)
-      }, 2000)
-    } catch (err) {
-      setError("An error occurred while processing your request. Please try again.")
-      setIsLoading(false)
+      const data = await matchProjectToJobs(githubUrl, jobDescriptionsArray)
+      if (!data || data.error) {
+        setLocalError(data?.error || "Failed to get results from the server.")
+        setResults(null)
+      } else {
+        setResults(data)
+      }
+    } catch (err: any) {
+      setLocalError("Network or server error. Please try again.")
+      setResults(null)
     }
   }
 
@@ -116,15 +98,24 @@ export function ProjectToJobMatcher() {
               </p>
             </div>
 
-            {error && (
+            {submitted && (!githubUrl || !jobDescriptions) && (
               <Alert variant="destructive">
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>
+                  { !githubUrl ? "Please enter a GitHub repository URL" : "Please enter at least one job description" }
+                </AlertDescription>
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
+            {(localError || error) && (
+              <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{localError || error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Analyzing...

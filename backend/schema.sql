@@ -40,9 +40,12 @@ CREATE TABLE matches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER,
     job_id INTEGER,
-    score INTEGER NOT NULL,
-    factors TEXT,  -- JSON array as text
+    user_id INTEGER, -- the user (talent or company) who initiated the matching
+    match_score INTEGER NOT NULL,
+    key_factors TEXT,  -- JSON array as text
+    match_type TEXT,  -- 'project-to-job' or 'job-to-project'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects (id),
-    FOREIGN KEY (job_id) REFERENCES jobs (id)
+    FOREIGN KEY (job_id) REFERENCES jobs (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
 );

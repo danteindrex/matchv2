@@ -77,7 +77,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Set your OpenAI API key
-export OPENAI_API_KEY=your_api_key_here  # On Windows: set OPENAI_API_KEY=your_api_key_here
+export GEMINI_API_KEY=AIzaSyChNRW30MRoCrEqctZi7g4YAmetkwEZsuA  # On Windows: set OPENAI_API_KEY=your_api_key_here
 
 # Run the Flask server
 python app.py

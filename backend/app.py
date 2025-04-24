@@ -318,6 +318,46 @@ def delete_job(current_user, job_id):
     
     return jsonify({'message': 'Job deleted successfully!'}), 200
 
+# Helper function to save matches to database
+def save_matches_to_db(user_id, matches, match_type, project_id=None, job_id=None):
+    conn = get_db_connection()
+    for match in matches:
+        # The keys will differ by type
+        if match_type == 'project-to-job':
+            job_id_val = match.get('job_id')
+            conn.execute(
+                """
+                INSERT INTO matches (project_id, job_id, user_id, match_score, key_factors, match_type)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    project_id,
+                    job_id_val,
+                    user_id,
+                    match.get('match_score', 0),
+                    json.dumps(match.get('key_factors', [])),
+                    match_type
+                )
+            )
+        elif match_type == 'job-to-project':
+            project_id_val = match.get('project_id')
+            conn.execute(
+                """
+                INSERT INTO matches (project_id, job_id, user_id, match_score, key_factors, match_type)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    project_id_val,
+                    job_id,
+                    user_id,
+                    match.get('match_score', 0),
+                    json.dumps(match.get('key_factors', [])),
+                    match_type
+                )
+            )
+    conn.commit()
+    conn.close()
+
 # Matching API
 @app.route('/api/match/project-to-jobs', methods=['POST'])
 @token_required
@@ -348,6 +388,14 @@ def match_project_to_jobs(current_user):
     
     # Use the CrewAI matcher to analyze and match
     results = matcher.match_project_to_jobs(dict(project), [dict(job) for job in jobs])
+    
+    # Persist each result into matches table
+    save_matches_to_db(
+        user_id=current_user['id'],
+        matches=results.get('matches', []),
+        match_type='project-to-job',
+        project_id=project_id
+    )
     
     return jsonify(results), 200
 
@@ -380,6 +428,14 @@ def match_job_to_projects(current_user):
     
     # Use the CrewAI matcher to analyze and match
     results = matcher.match_job_to_projects(dict(job), [dict(project) for project in projects])
+    
+    # Persist each result into matches table
+    save_matches_to_db(
+        user_id=current_user['id'],
+        matches=results.get('matches', []),
+        match_type='job-to-project',
+        job_id=job_id
+    )
     
     return jsonify(results), 200
 

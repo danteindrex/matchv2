@@ -1,13 +1,12 @@
-from crewai import Agent, Task, Crew
-from langchain_openai import ChatOpenAI
+from crewai import Agent, Task, Crew,LLM
 import json
 import re
 
 class ProjectJobMatcher:
     def __init__(self):
         # Initialize the LLM
-        self.llm = ChatOpenAI(
-            model="gpt-4o",
+        self.llm = LLM(
+            model="gemini/gemini-2.0-flash",
             temperature=0.2
         )
         
